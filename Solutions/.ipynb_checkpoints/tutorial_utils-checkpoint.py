@@ -118,6 +118,47 @@ def add_bandlimited_noise(d, lc=2, hc=80, sc=0.5):
     return d + (n * sc), n
 
 
+def add_trace_wise_noise(d,
+                         num_noisy_traces,
+                         noisy_trace_value,
+                         num_realisations,
+                        ):  
+    """ Add trace-wise noise to data patch
+    
+    Parameters
+    ----------
+    d: np.array [shot,y,x]
+        Data to add noise to
+    num_noisy_traces: int 
+        Number of noisy traces to add to shots
+    noisy_trace_value: int 
+        Value of noisy traces
+    num_realisations: int 
+        Number of repeated applications per shot
+        
+    Returns
+    -------
+        alldata: np.array 
+            Created noisy data
+    """
+    
+    alldata=[]
+    for k in range(len(d)):        
+        clean=d[k]    
+        data=np.ones([num_realisations,d.shape[1],d.shape[2]])
+        for i in range(len(data)):    
+            corr = np.random.randint(0,d.shape[2], num_noisy_traces) 
+            data[i] = clean.copy()
+            data[i,:,corr] = np.ones([1,d.shape[1]])*noisy_trace_value
+        alldata.append(data)
+        
+    alldata=np.array(alldata) 
+    alldata=alldata.reshape(num_realisations*d.shape[0],d.shape[1],d.shape[2])
+    print(alldata.shape)
+
+    return alldata
+
+
 def butter_bandpass(lowcut, highcut, fs, order=5):
     """ Bandpass filter
     

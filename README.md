@@ -1,15 +1,12 @@
-3-part Tutorial on Self Supervised Denoising
+6-part Tutorial on Self Supervised Denoising
 =========
 
-This repository contains the codes created for the Self-supervised denoising tutorial presented at Transform 2022.
+This repository contains the codes for the Self-supervised denoising tutorial series.
 
-Authors: 
+An initial version of the tutorial was given at Transform22 by:
  - Claire Birnie (claire.birnie@kaust.edu.sa), and 
- - Sixiu Liu (sixiu.liu@kaust.edu.sa)
- 
-The tutorial was originally presented as a live-stream event on YouTube on April 27 2022 at 11 UTC. 
-
-YouTube Link: https://www.youtube.com/watch?v=d9yv90-JCZ0
+ - Sixiu Liu (sixiu.liu@kaust.edu.sa).
+This was presented as a live-stream event on YouTube on April 27 2022 at 11 UTC and can be view [here](https://www.youtube.com/watch?v=d9yv90-JCZ0)
 
 Tutorial overview
 ---------------------------
@@ -40,8 +37,7 @@ KAUST IBEX cluster). As well as the standard git files - README, .gitignore, etc
 The **Solutions** folder contains the completed notebooks. Note, there is no one *correct* way in which to write the necessary functions 
 therefore the proposed solutions are only there to serve as guidance. 
 
-Disclaimer: the code has all been written and tested on Linux operating systems, where GPU access is available. Neither of the authors are professional 
-software developers therefore, whilst we have spent significant time testing the code, we cannot gaurantee it is free of bugs.
+Disclaimer: the code has all been written and tested on Linux operating systems, where GPU access is available. Neither of the authors are professional software developers therefore, whilst we have spent significant time testing the code, we cannot guarantee it is free of bugs.
 
 Installation instructions
 ---------------------------
@@ -60,16 +56,6 @@ seismic section that is often used benchmarking new random noise suppression alg
 
 **Environment creation**
 
-We have made a conda environment file which contains all the necessary packages to run the tutorials. For ease of use,
-an installation script has been written to create the conda environment and  check the necessary packages were 
-correctly installed. The environment can be created with the following command (executed when in this folder):
-
-    ./install_env.sh
-    
-The enviornment can then be activated by running the command:
-
-    conda activate ssd_tutorial
-    
-
+Use the yaml
 
 
