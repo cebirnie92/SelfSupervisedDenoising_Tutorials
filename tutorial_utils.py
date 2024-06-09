@@ -1,3 +1,36 @@
+"""
+Helper Functions for Self-Supervised Seismic Denoising Tutorial Series
+======================================================================
+
+This module contains a set of helper functions focused on noise generation, data preparation, 
+and ensuring reproducible experiments. These functions are essential components of the 
+self-supervised denoising tutorial series, which focuses on seismic denoising using 
+blind-mask methodologies.
+
+These helper functions are intended to simplify the tutorial process and do not 
+require any modification or deep understanding. They are designed to work out-of-the-box 
+with the accompanying tutorial series, enabling you to focus on learning and 
+implementing the core concepts of self-supervised denoising.
+
+Contents:
+---------
+- regular_patching_2D: Regularly samples and extracts patches from a 2D array.
+- add_whitegaussian_noise: Adds white Gaussian noise to data patches.
+- add_bandlimited_noise: Adds bandlimited noise to data patches.
+- add_trace_wise_noise: Adds trace-wise noise to data patches.
+- butter_bandpass: Creates a bandpass filter.
+- butter_bandpass_filter: Applies a bandpass filter to a trace.
+- array_bp: Applies a bandpass filter to an array of traces.
+- band_limited_noise: Generates bandlimited noise.
+- set_seed: Sets random seeds for reproducibility.
+- weights_init: Initializes weights of a neural network.
+- make_data_loader: Creates data loaders for training and validation of a blind-spot neural network.
+- num_active_pixs: Compute the number of active pixels in a patch.
+
+Note: These functions are provided as-is and do not require any modification or deep understanding.
+"""
+
+
 import numpy as np
 import random
 import itertools
@@ -83,47 +116,6 @@ def add_bandlimited_noise(d, lc=2, hc=80, sc=0.5):
     n = band_limited_noise(size=d.shape, lowcut=lc, highcut=hc)
 
     return d + (n * sc), n
-
-
-def add_trace_wise_noise(d,
-                         num_noisy_traces,
-                         noisy_trace_value,
-                         num_realisations,
-                        ):  
-    """ Add trace-wise noise to data patch
-    
-    Parameters
-    ----------
-    d: np.array [shot,y,x]
-        Data to add noise to
-    num_noisy_traces: int 
-        Number of noisy traces to add to shots
-    noisy_trace_value: int 
-        Value of noisy traces
-    num_realisations: int 
-        Number of repeated applications per shot
-        
-    Returns
-    -------
-        alldata: np.array 
-            Created noisy data
-    """
-    
-    alldata=[]
-    for k in range(len(d)):        
-        clean=d[k]    
-        data=np.ones([num_realisations,d.shape[1],d.shape[2]])
-        for i in range(len(data)):    
-            corr = np.random.randint(0,d.shape[2], num_noisy_traces) 
-            data[i] = clean.copy()
-            data[i,:,corr] = np.ones([1,d.shape[1]])*noisy_trace_value
-        alldata.append(data)
-        
-    alldata=np.array(alldata) 
-    alldata=alldata.reshape(num_realisations*d.shape[0],d.shape[1],d.shape[2])
-    print(alldata.shape)
-
-    return alldata
 
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -264,8 +256,8 @@ def weights_init(m):
         NN
     """
     if isinstance(m, nn.Conv2d):
-        nn.init.xavier_normal(m.weight)
-        nn.init.constant(m.bias, 0)
+        nn.init.xavier_normal_(m.weight)
+        nn.init.constant_(m.bias, 0)
         
 
 def make_data_loader(noisy_patches, 
@@ -326,173 +318,58 @@ def make_data_loader(noisy_patches,
     
     return train_loader, test_loader
 
+def num_active_pixs(patchshape, percent_active=5, verbose=True):
+    '''Compute the number of active pixels in a patch.
 
-def plot_corruption(noisy, 
-                    crpt, 
-                    mask, 
-                    seismic_cmap='RdBu', 
-                    vmin=-0.25, 
-                    vmax=0.25):
-    """Plotting function of N2V pre-processing step
+    Parameters:
+    -----------
+    patchshape : tuple
+        Shape of the patch (height, width).
+    percent_active : float, optional
+        Percentage of active pixels to be selected within the patch. Default is 5.
+    verbose : bool, optional
+        If True, prints the number of active pixels selected. Default is True.
     
-    Parameters
-    ----------
-    noisy: np.array
-        Noisy data patch
-    crpt: np.array
-        Pre-processed data patch
-    mask: np.array
-        Mask corresponding to pre-processed data patch
-    seismic_cmap: str
-        Colormap for seismic plots
-    vmin: float
-        Minimum value on colour scale
-    vmax: float
-        Maximum value on colour scale
-        
-    Returns
-    -------
-        fig : pyplot.figure
-            Figure object
-        axs : pyplot.axs
-            Axes of figure
+    Returns:
+    --------
+    num_activepixels : int
+        Number of active pixels to be selected within the patch.
+    '''
+    # Compute the total number of pixels within a patch
+    total_num_pixels = patchshape[0]*patchshape[1]
+    # Compute the number that should be active pixels based on the choosen percentage
+    num_activepixels = int(np.floor((total_num_pixels/100) * percent_active))
+    if verbose: print("Number of active pixels selected: \n %.2f percent equals %i pixels"%(percent_active,num_activepixels))
+    return int(num_activepixels)
+
+
+def patch_selection(patches, co_percentile=25, verbose=True):
     """
+    Selects patches based on the sum of squares along the last two axes.
     
-    fig,axs = plt.subplots(1,3,figsize=[15,5])
-    axs[0].imshow(noisy, cmap=seismic_cmap, vmin=vmin, vmax=vmax)
-    axs[1].imshow(crpt, cmap=seismic_cmap, vmin=vmin, vmax=vmax)
-    axs[2].imshow(mask, cmap='binary_r')
-
-    axs[0].set_title('Original')
-    axs[1].set_title('Corrupted')
-    axs[2].set_title('Corruption Mask')
+    Parameters:
+    -----------
+    patches : numpy.ndarray
+        Input numpy array containing patches.
+    co_percentile : int, optional
+        The percentile threshold for selecting patches (default is 25).
+    verbose : bool, optional
+        Flag to print information about the number of patches removed and remaining (default is True).
     
-    fig.tight_layout()
-    return fig,axs
-
-def plot_training_metrics(train_accuracy_history,
-                         test_accuracy_history,
-                          train_loss_history,
-                          test_loss_history
-                         ):
-    """Plotting function of N2V training metrics
-    
-    Parameters
-    ----------
-    train_accuracy_history: np.array
-        Accuracy per epoch throughout training
-    test_accuracy_history: np.array
-        Accuracy per epoch throughout validation
-    train_loss_history: np.array
-        Loss per epoch throughout training
-    test_accuracy_history: np.array
-        Loss per epoch throughout validation
-        
-    Returns
-    -------
-        fig : pyplot.figure
-            Figure object
-        axs : pyplot.axs
-            Axes of figure
+    Returns:
+    --------
+        selected_patches : numpy.ndarray 
+            Numpy array with selected patches above the percentile threshold.
     """
-    fig,axs = plt.subplots(1,2,figsize=(15,4))
+    # Sum along the last two axes
+    sum_patches = np.mean(patches**2, axis=(1, 2))
     
-    axs[0].plot(train_accuracy_history, 'r', lw=2, label='train')
-    axs[0].plot(test_accuracy_history, 'k', lw=2, label='validation')
-    axs[0].set_title('RMSE', size=16)
-    axs[0].set_ylabel('RMSE', size=12)
-
-    axs[1].plot(train_loss_history, 'r', lw=2, label='train')
-    axs[1].plot(test_loss_history, 'k', lw=2, label='validation')
-    axs[1].set_title('Loss', size=16)
-    axs[1].set_ylabel('Loss', size=12)
+    # Find the indices of the bottom 10% of values
+    threshold = np.percentile(sum_patches, co_percentile)
+    rm_indices = np.where(sum_patches < threshold)[0]
     
-    for ax in axs:
-        ax.legend()
-        ax.set_xlabel('# Epochs', size=12)
-    fig.tight_layout()
-    return fig,axs
-
-
-def plot_synth_results(clean, 
-                       noisy, 
-                       denoised,
-                       cmap='RdBu', 
-                       vmin=-0.25, 
-                       vmax=0.25):
-    """Plotting function of synthetic results from denoising
+    # Remove the indices from the original numpy array
+    selected_patches = np.delete(patches, rm_indices, axis=0)
+    if verbose: print('%i patches removed, %i patches remaining'%(len(rm_indices), len(selected_patches)))
     
-    Parameters
-    ----------
-    clean: np.array
-        Clean data patch
-    noisy: np.array
-        Noisy data patch
-    denoised: np.array
-        Denoised data patch
-    cmap: str
-        Colormap for plots
-    vmin: float
-        Minimum value on colour scale
-    vmax: float
-        Maximum value on colour scale
-        
-    Returns
-    -------
-        fig : pyplot.figure
-            Figure object
-        axs : pyplot.axs
-            Axes of figure
-    """
-    
-    fig,axs = plt.subplots(1,4,figsize=[15,4])
-    axs[0].imshow(clean, aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
-    axs[1].imshow(noisy, aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
-    axs[2].imshow(denoised, aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
-    axs[3].imshow(noisy-denoised, aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
-
-    axs[0].set_title('Clean')
-    axs[1].set_title('Noisy')
-    axs[2].set_title('Denoised')
-    axs[3].set_title('Noise Removed')
-
-    fig.tight_layout()
-    return fig,axs
-
-def plot_field_results(noisy, 
-                       denoised,
-                       cmap='RdBu', 
-                       vmin=-0.25, 
-                       vmax=0.25):
-    """Plotting function of field results from denoising, i.e., where no clean is available
-    
-    Parameters
-    ----------
-    noisy: np.array
-        Noisy data patch
-    denoised: np.array
-        Denoised data patch
-    cmap: str
-        Colormap for plots
-    vmin: float
-        Minimum value on colour scale
-    vmax: float
-        Maximum value on colour scale
-        
-    Returns
-    -------
-        fig : pyplot.figure
-            Figure object
-        axs : pyplot.axs
-            Axes of figure
-    """
-    
-    fig,axs = plt.subplots(1,2,figsize=[15,8])
-    axs[0].imshow(noisy, aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
-    axs[1].imshow(denoised, aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
-
-    axs[0].set_title('Noisy')
-    axs[1].set_title('Denoised')
-
-    fig.tight_layout()
-    return fig,axs
+    return selected_patches
